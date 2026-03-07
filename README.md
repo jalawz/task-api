@@ -18,10 +18,11 @@ The main goal is educational: understand how to organize a Go API with:
 
 ## Current Features
 
-- Health check endpoint (`/ping`)
 - Create a task
 - List all tasks
 - Get one task by ID
+- Update a task
+- Delete a task
 - Automatic database migration for `Task` model
 
 ## Tech Stack
@@ -41,6 +42,8 @@ The main goal is educational: understand how to organize a Go API with:
 │   └── db.go
 ├── models/
 │   └── task.go
+├── routes/
+│   └── routes.go
 ├── main.go
 ├── go.mod
 └── tasks.db
@@ -66,7 +69,7 @@ http://localhost:8080
 
 A local SQLite database file (`tasks.db`) is created automatically.
 
-## API Documentation (Current)
+## API Documentation
 
 Base URL:
 
@@ -74,19 +77,26 @@ Base URL:
 http://localhost:8080
 ```
 
-### 1) Health Check
+### 1) List Tasks
 
 - **Method:** `GET`
-- **Path:** `/ping`
+- **Path:** `/tasks`
 
 #### Response
 
 - **Status:** `200 OK`
 
 ```json
-{
-  "message": "pong"
-}
+[
+  {
+    "id": 1,
+    "title": "Study Go",
+    "description": "Read about Gin and GORM",
+    "status": false,
+    "created_at": "2026-03-07T03:00:00Z",
+    "updated_at": "2026-03-07T03:00:00Z"
+  }
+]
 ```
 
 ---
@@ -122,72 +132,12 @@ http://localhost:8080
 }
 ```
 
-#### Response (invalid JSON)
-
-- **Status:** `400 Bad Request`
-
-```json
-{
-  "error": "<validation or bind error>"
-}
-```
-
-#### Response (database error)
-
-- **Status:** `500 Internal Server Error`
-
-```json
-{
-  "error": "Error creating task"
-}
-```
-
 ---
 
-### 3) List Tasks
-
-- **Method:** `GET`
-- **Path:** `/tasks`
-
-#### Response (success)
-
-- **Status:** `200 OK`
-
-```json
-[
-  {
-    "id": 1,
-    "title": "Study Go",
-    "description": "Read about Gin and GORM",
-    "status": false,
-    "created_at": "2026-03-07T03:00:00Z",
-    "updated_at": "2026-03-07T03:00:00Z"
-  }
-]
-```
-
-#### Response (database error)
-
-- **Status:** `500 Internal Server Error`
-
-```json
-{
-  "error": "Error fetching tasks"
-}
-```
-
----
-
-### 4) Get Task by ID
+### 3) Get Task by ID
 
 - **Method:** `GET`
 - **Path:** `/tasks/:id`
-
-#### Example
-
-```text
-GET /tasks/1
-```
 
 #### Response (success)
 
@@ -214,30 +164,35 @@ GET /tasks/1
 }
 ```
 
-## Example cURL Commands
+---
 
-```bash
-# Health check
-curl -X GET http://localhost:8080/ping
+### 4) Update Task
 
-# Create task
-curl -X POST http://localhost:8080/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Study Go",
-    "description": "Read about Gin and GORM",
-    "status": false
-  }'
+- **Method:** `PUT`
+- **Path:** `/tasks/:id`
+- **Content-Type:** `application/json`
 
-# List tasks
-curl -X GET http://localhost:8080/tasks
+#### Request Body
 
-# Get task by ID
-curl -X GET http://localhost:8080/tasks/1
+```json
+{
+  "title": "Go Advanced",
+  "description": "Learn about interfaces",
+  "status": true
+}
 ```
 
-## Notes
+#### Response (success)
 
-- This is an early-stage learning project.
-- There are no automated tests yet.
-- Input validation rules are still minimal and can be expanded.
+- **Status:** `200 OK`
+
+---
+
+### 5) Delete Task
+
+- **Method:** `DELETE`
+- **Path:** `/tasks/:id`
+
+#### Response (success)
+
+- **Status:** `204 No Content`

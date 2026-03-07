@@ -46,3 +46,36 @@ func GetTaskByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, task)
 }
+
+func UpdateTask(c *gin.Context) {
+	id := c.Param("id")
+	var task models.Task
+
+	if err := database.DB.First(&task, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found."})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&task); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	database.DB.Save(&task)
+
+	c.JSON(http.StatusOK, task)
+}
+
+func DeleteTask(c *gin.Context) {
+	id := c.Param("id")
+	var task models.Task
+
+	result := database.DB.Delete(&task, id)
+
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
+}
