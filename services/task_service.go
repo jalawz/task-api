@@ -7,6 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockgen -destination=../mocks/mock_task_service.go -package=mocks github.com/jalawz/task-api/services TaskService
+
 type TaskService interface {
 	Create(ctx context.Context, task *models.Task) (models.Task, error)
 	GetAll(ctx context.Context) ([]models.Task, error)
