@@ -6,15 +6,12 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
-
-func InitDB() {
-	database, err := gorm.Open(sqlite.Open("tasks.db"), &gorm.Config{})
+func InitDB() *gorm.DB {
+	db, err := gorm.Open(sqlite.Open("tasks.db"), &gorm.Config{})
 	if err != nil {
 		panic("Fail to connect to the database!")
 	}
 
-	database.AutoMigrate(&models.Task{})
-
-	DB = database
+	db.AutoMigrate(&models.Task{})
+	return db
 }

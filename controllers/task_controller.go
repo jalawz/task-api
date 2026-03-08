@@ -1,79 +1,90 @@
 package controllers
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jalawz/task-api/database"
 	"github.com/jalawz/task-api/models"
+	"github.com/jalawz/task-api/services"
+	"gorm.io/gorm"
 )
 
-func CreateTask(c *gin.Context) {
-	var task models.Task
+type TaskController struct {
+	Service services.TaskService
+}
 
+func (tc *TaskController) CreateTask(c *gin.Context) {
+	var task models.Task
 	if err := c.ShouldBindJSON(&task); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := database.DB.Create(&task).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating task"})
+	createdTask, err := tc.Service.Create(c.Request.Context(), &task)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, task)
+	c.JSON(http.StatusCreated, createdTask)
 }
 
-func ListTasks(c *gin.Context) {
-	tasks := []models.Task{}
-
-	if err := database.DB.Find(&tasks).Error; err != nil {
+func (tc *TaskController) ListTasks(c *gin.Context) {
+	tasks, err := tc.Service.GetAll(c.Request.Context())
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching tasks"})
 		return
 	}
-
 	c.JSON(http.StatusOK, tasks)
 }
 
-func GetTaskByID(c *gin.Context) {
+func (tc *TaskController) GetTaskByID(c *gin.Context) {
 	id := c.Param("id")
-	var task models.Task
+	task, err := tc.Service.GetByID(c.Request.Context(), id)
 
-	if err := database.DB.First(&task, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("Task with id %s not found", id)})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
-
 	c.JSON(http.StatusOK, task)
 }
 
-func UpdateTask(c *gin.Context) {
+func (tc *TaskController) UpdateTask(c *gin.Context) {
 	id := c.Param("id")
-	var task models.Task
+	var taskUpdate models.Task
 
-	if err := database.DB.First(&task, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found."})
-		return
-	}
-
-	if err := c.ShouldBindJSON(&task); err != nil {
+	if err := c.ShouldBindJSON(&taskUpdate); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	database.DB.Save(&task)
+	updatedTask, err := tc.Service.Update(c.Request.Context(), id, &taskUpdate)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error updating task %s", id)})
+		return
+	}
 
-	c.JSON(http.StatusOK, task)
+	c.JSON(http.StatusOK, updatedTask)
 }
 
-func DeleteTask(c *gin.Context) {
+func (tc *TaskController) DeleteTask(c *gin.Context) {
 	id := c.Param("id")
-	var task models.Task
-
-	result := database.DB.Delete(&task, id)
-
-	if result.RowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+	if err := tc.Service.Delete(c.Request.Context(), id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error deleting task %s", id)})
 		return
 	}
 
